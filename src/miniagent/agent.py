@@ -1,4 +1,7 @@
 import json
+import os
+import platform
+from datetime import date
 from openai import OpenAI
 from typing import cast
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
@@ -22,8 +25,20 @@ class Agent:
         self._init()
 
     def _init(self):
-        with open("prompts/system.md", "r", encoding="utf-8") as f:
+        # Get the package directory and find the system prompt
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(package_dir, "..", "..", "prompts", "system.md")
+        
+        with open(prompt_path, "r", encoding="utf-8") as f:
             system_content = f.read()
+
+        # Replace placeholders with actual values
+        today = date.today()
+        system_content = system_content.format(
+            platform=platform.system(),
+            pwd=os.getcwd(),
+            date=today.strftime("%A, %B %d, %Y")
+        )
 
         self.context.add({"role": "system", "content": system_content})
 
