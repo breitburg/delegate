@@ -3,6 +3,7 @@ import subprocess
 import json
 from pathlib import Path
 import re
+import ollama
 
 
 class ToolRegistry:
@@ -316,3 +317,89 @@ def grep_files(
         )
     except Exception as e:
         return f"Error in grep: {str(e)}"
+
+
+@registry.register(
+    {
+        "type": "function",
+        "function": {
+            "name": "WebSearch",
+            "description": "Perform a web search for a query using Ollama's web search API. Returns relevant results with titles, URLs, and content snippets.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query string",
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default 5, max 10)",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    }
+)
+def web_search(query: str, max_results: int = 5) -> str:
+    """Perform a web search using Ollama's web search API and return formatted Markdown."""
+    try:
+        response = ollama.web_search(query, max_results=max_results)
+
+        # Format results as Markdown
+        markdown_lines = [f"# Search Results for: {query}\n"]
+
+        for i, result in enumerate(response.results, 1):
+            markdown_lines.append(f"## {i}. {result.title}")
+            markdown_lines.append(f"> {result.url}\n")
+            markdown_lines.append(f"{result.content}\n")
+
+        return "\n".join(markdown_lines)
+    except Exception as e:
+        return f"Error performing web search: {str(e)}"
+
+
+@registry.register(
+    {
+        "type": "function",
+        "function": {
+            "name": "WebFetch",
+            "description": "Fetch a single web page by URL using Ollama's web fetch API. Returns the page title, main content, and links found on the page.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The URL to fetch",
+                    },
+                },
+                "required": ["url"],
+            },
+        },
+    }
+)
+def web_fetch(url: str) -> str:
+    """Fetch a web page using Ollama's web fetch API and return formatted Markdown."""
+    try:
+        from ollama import web_fetch as ollama_web_fetch
+
+        result = ollama_web_fetch(url)
+
+        # Format result as Markdown
+        markdown_lines = [f"# {result.title}\n"]
+        markdown_lines.append(f"> {url}\n")
+
+        # Add content
+        markdown_lines.append(f"{result.content}\n")
+
+        # Add links if available
+        if result.links:
+            markdown_lines.append(f"## Links Found\n")
+            for link in result.links:
+                markdown_lines.append(f"- {link}")
+            markdown_lines.append("")
+
+        return "\n".join(markdown_lines)
+    except Exception as e:
+        return f"Error fetching web page: {str(e)}"
