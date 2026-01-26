@@ -10,6 +10,7 @@ dependencies = [
     "rich",
     "questionary",
     "prompt-toolkit",
+    "pyfiglet>=1.0.4",
 ]
 
 [build-system]

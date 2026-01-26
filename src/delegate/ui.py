@@ -8,6 +8,9 @@ from rich.syntax import Syntax
 from questionary import select
 from prompt_toolkit import prompt
 from prompt_toolkit.styles import Style
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.keys import Keys
+from prompt_toolkit.formatted_text import FormattedText
 import json
 import difflib
 
@@ -27,13 +30,16 @@ class UI:
 
     def set_mode(self, mode: Mode):
         self.mode = mode
-        mode_text = Text(
-            f" Mode: {self.mode.value.upper()} ",
-            style="bold black on green"
-            if self.mode == Mode.AUTO
-            else "bold black on yellow",
+
+    def _get_prompt_text(self) -> FormattedText:
+        bg = "darkmagenta" if self.mode == Mode.AUTO else "yellow"
+        fg = "white" if self.mode == Mode.AUTO else "black"
+        return FormattedText(
+            [
+                ("bg:" + bg + " fg:" + fg + " bold", f" {self.mode.value.upper()} "),
+                ("", " › "),
+            ]
         )
-        self.console.print(mode_text)
 
     def print_assistant_thinking(self):
         panel = Panel(
@@ -66,8 +72,18 @@ class UI:
 
     def get_user_input(self) -> str:
         self._stop_live()
-        # Use prompt_toolkit for full cursor navigation support
-        user_input = prompt("You > ")
+
+        # Set up key bindings for Tab to switch modes
+        kb = KeyBindings()
+
+        @kb.add(Keys.ControlI)  # ControlI is Tab
+        def _(event):
+            modes = list(Mode)
+            current_index = modes.index(self.mode)
+            next_index = (current_index + 1) % len(modes)
+            self.set_mode(modes[next_index])
+
+        user_input = prompt(lambda: self._get_prompt_text(), key_bindings=kb)
         return user_input.strip()
 
     def _format_diff(self, old: str, new: str) -> str:

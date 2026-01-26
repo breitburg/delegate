@@ -8,6 +8,7 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolPara
 from .context import Context
 from .tools import registry
 from .ui import ui, Mode
+from pyfiglet import Figlet
 
 
 class Agent:
@@ -28,7 +29,7 @@ class Agent:
         # Get the package directory and find the system prompt
         package_dir = os.path.dirname(os.path.abspath(__file__))
         prompt_path = os.path.join(package_dir, "..", "..", "prompts", "system.md")
-        
+
         with open(prompt_path, "r", encoding="utf-8") as f:
             system_content = f.read()
 
@@ -37,17 +38,14 @@ class Agent:
         system_content = system_content.format(
             platform=platform.system(),
             pwd=os.getcwd(),
-            date=today.strftime("%A, %B %d, %Y")
+            date=today.strftime("%A, %B %d, %Y"),
         )
 
         self.context.add({"role": "system", "content": system_content})
 
     def run(self):
-        ui.set_mode(ui.mode)
-        ui.print_system(
-            "Type '/auto' for auto mode, '/manual' for confirmations, '/clear' to clear context, '/quit' to exit"
-        )
-
+        f = Figlet(font="small", width=80)
+        ui.print_system(f.renderText("Delegate"))
         while True:
             try:
                 user_input = ui.get_user_input()
