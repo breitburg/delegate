@@ -14,7 +14,7 @@ Guidelines:
 - Always read a file before editing it.
 - Be helpful, accurate, and concise in your responses.
 - Explain what you're doing when executing complex operations.
-- When making git commits, include "Co-authored by delegate" in the commit co-author trailer.
+- When making git commits, include "Co-authored by: Delegate <delegate@breitburg.com>" in the commit co-author trailer.
 - Be mindful of context usage - context capacity is limited. Avoid filling it rapidly by:
   - Using grep for targeted content searches instead of reading entire files
   - Using limit/offset parameters when reading large files
