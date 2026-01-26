@@ -5,6 +5,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
 from rich.syntax import Syntax
+from rich.console import Group
 from questionary import select
 from prompt_toolkit import prompt
 from prompt_toolkit.styles import Style
@@ -27,6 +28,8 @@ class UI:
         self.live = None
         self._pending_tool = None
         self._pending_tool_lines = 0
+        self._reasoning = ""
+        self._content = ""
 
     def set_mode(self, mode: Mode):
         self.mode = mode
@@ -42,6 +45,8 @@ class UI:
         )
 
     def print_assistant_thinking(self):
+        self._reasoning = ""
+        self._content = ""
         panel = Panel(
             Text("Thinking...", style="italic dim"),
             title="[bold blue]Assistant[/bold blue]",
@@ -50,11 +55,37 @@ class UI:
         self.live = Live(panel, console=self.console, refresh_per_second=10)
         self.live.start()
 
+    def update_assistant_reasoning(self, reasoning: str):
+        self._reasoning = reasoning
+        self._update_display()
+
     def update_assistant_content(self, content: str):
-        if self.live:
+        self._content = content
+        self._update_display()
+
+    def _update_display(self):
+        if not self.live:
+            return
+
+        # Build separate renderables for reasoning (grey) and content (normal)
+        renderables = []
+        if self._reasoning:
+            renderables.append(Markdown(self._reasoning, style="dim"))
+        if self._content:
+            renderables.append(Markdown(self._content))
+
+        if renderables:
+            title = "[bold blue]Assistant[/bold blue]"
+
+            if len(renderables) == 1:
+                content = renderables[0]
+            else:
+                # Add spacing between reasoning and content
+                content = Group(renderables[0], Text(""), renderables[1])
+
             panel = Panel(
-                Markdown(content),
-                title="[bold blue]Assistant[/bold blue]",
+                content,
+                title=title,
                 border_style="blue",
             )
             self.live.update(panel)
@@ -232,6 +263,17 @@ class UI:
 
     def print_system(self, message: str):
         self.console.print(Text(message, style="dim"))
+
+    def print_info(self, message: str):
+        self.console.print("\n")
+        self.console.print(
+            Panel(
+                Text(message, style="black"),
+                border_style="grey58",
+                style="on grey58",
+            )
+        )
+        self.console.print("\n")
 
 
 ui = UI()

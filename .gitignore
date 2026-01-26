@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Delegate session files
+.delegate-session.json

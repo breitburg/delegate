@@ -23,10 +23,10 @@ class Agent:
         self.model = model
         self.temperature = temperature
         self.context = Context()
-        self._init()
+        self._system_prompt = self._load_system_prompt()
 
-    def _init(self):
-        # Get the package directory and find the system prompt
+    def _load_system_prompt(self) -> str:
+        """Load and format the system prompt from the system.md file."""
         package_dir = os.path.dirname(os.path.abspath(__file__))
         prompt_path = os.path.join(package_dir, "..", "..", "prompts", "system.md")
 
@@ -35,17 +35,25 @@ class Agent:
 
         # Replace placeholders with actual values
         today = date.today()
-        system_content = system_content.format(
+        return system_content.format(
             platform=platform.system(),
             pwd=os.getcwd(),
             date=today.strftime("%A, %B %d, %Y"),
         )
 
-        self.context.add({"role": "system", "content": system_content})
-
     def run(self):
         f = Figlet(font="small", width=80)
         ui.print_system(f.renderText("Delegate"))
+        
+        # Display quick usage guide
+        ui.print_system("Press `Tab` to toggle modes\n`/clear` to erase session")
+        ui.print_system("")
+        
+        # Display restored session message
+        messages = self.context.get_messages()
+        if messages:
+            ui.print_info(f"Restored session with {len(messages)} messages")
+        
         while True:
             try:
                 user_input = ui.get_user_input()
@@ -56,14 +64,6 @@ class Agent:
                 if user_input == "/quit":
                     ui.print_system("Goodbye!")
                     break
-
-                if user_input == "/auto":
-                    ui.set_mode(Mode.AUTO)
-                    continue
-
-                if user_input == "/manual":
-                    ui.set_mode(Mode.MANUAL)
-                    continue
 
                 if user_input == "/clear":
                     self.context.clear()
@@ -91,10 +91,15 @@ class Agent:
             ui.print_assistant_thinking()
 
             try:
+                # Prepend system prompt to messages for the API call
+                messages = [
+                    {"role": "system", "content": self._system_prompt}
+                ] + self.context.get_messages()
+
                 stream = self.client.chat.completions.create(
                     model=self.model,
                     messages=cast(
-                        list[ChatCompletionMessageParam], self.context.get_messages()
+                        list[ChatCompletionMessageParam], messages
                     ),  # type: ignore
                     temperature=self.temperature,
                     tools=cast(
@@ -105,10 +110,16 @@ class Agent:
                 )
 
                 content = ""
+                reasoning = ""
                 tool_calls_data = []
 
                 for chunk in stream:
                     delta = chunk.choices[0].delta
+
+                    # Check for reasoning content
+                    if hasattr(delta, "reasoning") and delta.reasoning:
+                        reasoning += delta.reasoning
+                        ui.update_assistant_reasoning(reasoning)
 
                     if delta.content:
                         content += delta.content
