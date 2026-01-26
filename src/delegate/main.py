@@ -1,3 +1,4 @@
+import os
 import typer
 from delegate.agent import Agent
 
@@ -26,7 +27,12 @@ def main(
         "--base-url",
         help="API base URL (default: Ollama)",
     ),
-    api_key: str = typer.Option("ollama", "-k", "--api-key", help="API key"),
+    api_key: str = typer.Option(
+        lambda: os.environ.get("OLLAMA_API_KEY", "ollama"),
+        "-k",
+        "--api-key",
+        help="API key (default: OLLAMA_API_KEY env var or 'ollama')",
+    ),
 ):
     """
     Start the coding agent CLI.

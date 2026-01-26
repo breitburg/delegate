@@ -16,8 +16,10 @@ class Agent:
         model: str = "glm-4.7:cloud",
         temperature: float = 0.7,
         base_url: str = "http://localhost:11434",
-        api_key: str = "ollama",
+        api_key: str | None = None,
     ):
+        if api_key is None:
+            api_key = os.environ.get("OLLAMA_API_KEY", "ollama")
         self.client = Client(
             host=base_url, headers={"Authorization": f"Bearer {api_key}"}
         )
