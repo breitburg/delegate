@@ -1,11 +1,11 @@
 [project]
 name = "delegate"
 version = "0.1.0"
-description = "Lightweight coding agent with OpenAI"
+description = "Lightweight coding agent with Ollama"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "openai",
+    "ollama",
     "typer",
     "rich",
     "questionary",

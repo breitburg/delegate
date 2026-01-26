@@ -21,7 +21,7 @@ def main(
         help="Temperature for response generation",
     ),
     base_url: str = typer.Option(
-        "http://localhost:11434/v1",
+        "http://localhost:11434",
         "-u",
         "--base-url",
         help="API base URL (default: Ollama)",

@@ -2,9 +2,7 @@ import json
 import os
 import platform
 from datetime import date
-from openai import OpenAI
-from typing import cast
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+from ollama import Client
 from rich.text import Text
 from .context import Context
 from .tools import registry
@@ -17,10 +15,12 @@ class Agent:
         self,
         model: str = "glm-4.7:cloud",
         temperature: float = 0.7,
-        base_url: str = "http://localhost:11434/v1",
+        base_url: str = "http://localhost:11434",
         api_key: str = "ollama",
     ):
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = Client(
+            host=base_url, headers={"Authorization": f"Bearer {api_key}"}
+        )
         self.model = model
         self.temperature = temperature
         self.context = Context()
@@ -45,16 +45,16 @@ class Agent:
     def run(self):
         f = Figlet(font="small", width=80)
         ui.console.print(Text(f.renderText("Delegate"), style="dim"))
-        
+
         # Display quick usage guide
         ui.print_system("Press `Tab` to toggle modes  \n`/clear` to erase session")
         ui.console.print()
-        
+
         # Display restored session message
         messages = self.context.get_messages()
         if messages:
             ui.print_info(f"Restored session with {len(messages)} messages")
-        
+
         while True:
             try:
                 user_input = ui.get_user_input()
@@ -97,17 +97,12 @@ class Agent:
                     {"role": "system", "content": self._system_prompt}
                 ] + self.context.get_messages()
 
-                stream = self.client.chat.completions.create(
+                stream = self.client.chat(
                     model=self.model,
-                    messages=cast(
-                        list[ChatCompletionMessageParam], messages
-                    ),  # type: ignore
-                    temperature=self.temperature,
-                    tools=cast(
-                        list[ChatCompletionToolParam], registry.get_definitions()
-                    ),  # type: ignore
+                    messages=messages,
+                    tools=registry.get_definitions(),
                     stream=True,
-                    timeout=60,
+                    options={"temperature": self.temperature},
                 )
 
                 content = ""
@@ -115,51 +110,37 @@ class Agent:
                 tool_calls_data = []
 
                 for chunk in stream:
-                    delta = chunk.choices[0].delta
+                    message = chunk.get("message", {})
 
-                    # Check for reasoning content
-                    if hasattr(delta, "reasoning") and delta.reasoning:
-                        reasoning += delta.reasoning
+                    if "thinking" in message and message["thinking"]:
+                        reasoning += message["thinking"]
                         ui.update_assistant_reasoning(reasoning)
 
-                    if delta.content:
-                        content += delta.content
+                    if "content" in message and message["content"]:
+                        content += message["content"]
                         ui.update_assistant_content(content)
 
-                    if delta.tool_calls:
-                        for tool_call in delta.tool_calls:
-                            tool_calls_data.append(
-                                {
-                                    "id": tool_call.id,
-                                    "type": tool_call.type,
-                                    "function": {
-                                        "name": tool_call.function.name
-                                        if tool_call.function
-                                        else None,
-                                        "arguments": tool_call.function.arguments
-                                        if tool_call.function
-                                        else None,
-                                    },
-                                }
+                    if "tool_calls" in message and message["tool_calls"]:
+                        for tool_call in message["tool_calls"]:
+                            call_dict = (
+                                tool_call.model_dump()
+                                if hasattr(tool_call, "model_dump")
+                                else tool_call
                             )
+                            tool_calls_data.append(call_dict)
 
                 if tool_calls_data:
                     ui.cancel_assistant()
 
-                    merged_calls = self._merge_tool_calls(tool_calls_data)
-
-                    for tool_call in merged_calls:
-                        if tool_call["type"] != "function":
-                            continue
-                        if not tool_call["function"]:
-                            continue
-
-                        tool_name = tool_call["function"]["name"]
+                    for tool_call in tool_calls_data:
+                        func = tool_call.get("function", {})
+                        tool_name = func.get("name")
                         if not tool_name:
                             continue
 
-                        tool_args_str = tool_call["function"]["arguments"] or ""
-                        tool_args = json.loads(tool_args_str) if tool_args_str else {}
+                        tool_args = func.get("arguments", {})
+                        if isinstance(tool_args, str):
+                            tool_args = json.loads(tool_args)
 
                         if ui.mode != Mode.MANUAL:
                             result = self._execute_tool(tool_name, tool_args)
@@ -198,19 +179,3 @@ class Agent:
                 ui.cancel_assistant()
                 ui.print_error(f"API error: {str(e)}")
                 break
-
-    def _merge_tool_calls(self, tool_calls_data: list[dict]) -> list[dict]:
-        merged = {}
-        for call in tool_calls_data:
-            call_id = call["id"]
-            if call_id not in merged:
-                merged[call_id] = {
-                    "id": call_id,
-                    "type": call["type"],
-                    "function": {"name": call["function"]["name"], "arguments": ""},
-                }
-            if call["function"]["arguments"]:
-                merged[call_id]["function"]["arguments"] += call["function"][
-                    "arguments"
-                ]
-        return list(merged.values())

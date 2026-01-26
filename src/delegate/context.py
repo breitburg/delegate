@@ -42,7 +42,7 @@ class Context:
                         "type": "function",
                         "function": {
                             "name": name,
-                            "arguments": json.dumps(args),
+                            "arguments": args,
                         },
                     }
                 ],
