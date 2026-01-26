@@ -14,4 +14,4 @@ Guidelines:
 - Always read a file before editing it.
 - Be helpful, accurate, and concise in your responses.
 - Explain what you're doing when executing complex operations.
-- When making git commits, include "Co-authored by miniagent" in the commit co-author trailer.
+- When making git commits, include "Co-authored by delegate" in the commit co-author trailer.

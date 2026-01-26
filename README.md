@@ -15,7 +15,7 @@ A lightweight coding agent with OpenAI-compatible APIs (Ollama by default).
 Install from GitHub (SSH):
 
 ```bash
-uv tool install git+ssh://git@github.com/breitburg/miniagent.git
+uv tool install git+ssh://git@github.com/breitburg/delegate.git
 ```
 
 Or install from source:
