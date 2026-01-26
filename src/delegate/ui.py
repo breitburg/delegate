@@ -262,7 +262,7 @@ class UI:
         self.console.print(panel)
 
     def print_system(self, message: str):
-        self.console.print(Text(message, style="dim"))
+        self.console.print(Markdown(message, style="dim"))
 
     def print_info(self, message: str):
         self.console.print("\n")

@@ -5,6 +5,7 @@ from datetime import date
 from openai import OpenAI
 from typing import cast
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+from rich.text import Text
 from .context import Context
 from .tools import registry
 from .ui import ui, Mode
@@ -43,11 +44,11 @@ class Agent:
 
     def run(self):
         f = Figlet(font="small", width=80)
-        ui.print_system(f.renderText("Delegate"))
+        ui.console.print(Text(f.renderText("Delegate"), style="dim"))
         
         # Display quick usage guide
-        ui.print_system("Press `Tab` to toggle modes\n`/clear` to erase session")
-        ui.print_system("")
+        ui.print_system("Press `Tab` to toggle modes  \n`/clear` to erase session")
+        ui.console.print()
         
         # Display restored session message
         messages = self.context.get_messages()
