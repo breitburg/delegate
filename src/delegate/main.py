@@ -1,5 +1,5 @@
 import typer
-from miniagent.agent import Agent
+from delegate.agent import Agent
 
 app = typer.Typer(help="Lightweight coding agent with OpenAI-compatible APIs")
 

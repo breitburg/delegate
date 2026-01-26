@@ -1,5 +1,5 @@
 [project]
-name = "miniagent"
+name = "delegate"
 version = "0.1.0"
 description = "Lightweight coding agent with OpenAI"
 readme = "README.md"
@@ -17,4 +17,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-miniagent = "miniagent.main:app"
+delegate = "delegate.main:app"

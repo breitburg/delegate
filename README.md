@@ -1,4 +1,4 @@
-# miniagent
+# delegate
 
 A lightweight coding agent with OpenAI-compatible APIs (Ollama by default).
 
@@ -29,13 +29,13 @@ uv sync
 Run with Ollama (default):
 
 ```bash
-uv run miniagent
+uv run delegate
 ```
 
 Run with OpenAI:
 
 ```bash
-uv run miniagent -m gpt-4o -u https://api.openai.com/v1 -k your_api_key
+uv run delegate -m gpt-4o -u https://api.openai.com/v1 -k your_api_key
 ```
 
 ### Commands
@@ -55,11 +55,11 @@ uv run miniagent -m gpt-4o -u https://api.openai.com/v1 -k your_api_key
 
 ```bash
 # Ollama with custom model
-uv run miniagent -m llama3:8b
+uv run delegate -m llama3:8b
 
 # OpenAI
-uv run miniagent -m gpt-4o -u https://api.openai.com/v1 -k sk-xxx
+uv run delegate -m gpt-4o -u https://api.openai.com/v1 -k sk-xxx
 
 # OpenRouter
-uv run miniagent -m anthropic/claude-3-opus -u https://openrouter.ai/api/v1 -k sk-or-xxx
+uv run delegate -m anthropic/claude-3-opus -u https://openrouter.ai/api/v1 -k sk-or-xxx
 ```

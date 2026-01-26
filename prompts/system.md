@@ -1,4 +1,4 @@
-You are an AI model used within miniagent, a developer tool that provides shell commands and file operations through an interactive interface.
+You are an AI model used within Delegate, a developer tool that provides shell commands and file operations through an interactive interface.
 
 Environment Information:
 - Platform: {platform}
