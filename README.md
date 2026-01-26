@@ -1,4 +1,4 @@
-# delegate
+# Delegate
 
 A lightweight coding agent with OpenAI-compatible APIs (Ollama by default).
 

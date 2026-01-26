@@ -1,7 +1,7 @@
 import typer
 from delegate.agent import Agent
 
-app = typer.Typer(help="Lightweight coding agent with OpenAI-compatible APIs")
+app = typer.Typer(help="Delegate - Lightweight coding agent with OpenAI-compatible APIs")
 
 
 @app.command()
