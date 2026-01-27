@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Callable
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
@@ -22,7 +23,7 @@ class Mode(Enum):
 
 
 class UI:
-    def __init__(self):
+    def __init__(self, stop_callback: Callable[[], None] | None = None):
         self.console = Console()
         self.mode: Mode = Mode.MANUAL
         self.live = None
@@ -30,6 +31,7 @@ class UI:
         self._pending_tool_lines = 0
         self._reasoning = ""
         self._content = ""
+        self._stop_callback = stop_callback
 
     def set_mode(self, mode: Mode):
         self.mode = mode
@@ -104,7 +106,7 @@ class UI:
     def get_user_input(self) -> str:
         self._stop_live()
 
-        # Set up key bindings for Tab to switch modes
+        # Set up key bindings for Tab to switch modes and Esc to stop agent
         kb = KeyBindings()
 
         @kb.add(Keys.ControlI)  # ControlI is Tab
@@ -113,6 +115,12 @@ class UI:
             current_index = modes.index(self.mode)
             next_index = (current_index + 1) % len(modes)
             self.set_mode(modes[next_index])
+
+        @kb.add(Keys.Escape)
+        def _(event):
+            if self._stop_callback:
+                self._stop_callback()
+                event.app.exit(result="/stop")
 
         user_input = prompt(lambda: self._get_prompt_text(), key_bindings=kb)
         return user_input.strip()

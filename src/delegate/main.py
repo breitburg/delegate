@@ -33,11 +33,21 @@ def main(
         "--api-key",
         help="API key (default: OLLAMA_API_KEY env var or 'ollama')",
     ),
+    continue_session: bool = typer.Option(
+        False,
+        "-c",
+        "--continue",
+        help="Continue previous session from .delegate-session.json",
+    ),
 ):
     """
     Start the coding agent CLI.
     """
     agent = Agent(
-        model=model, temperature=temperature, base_url=base_url, api_key=api_key
+        model=model,
+        temperature=temperature,
+        base_url=base_url,
+        api_key=api_key,
+        continue_session=continue_session,
     )
     agent.run()

@@ -3,10 +3,11 @@ import os
 
 
 class Context:
-    def __init__(self):
+    def __init__(self, continue_session: bool = False):
         self._messages: list[dict] = []
         self._session_file = os.path.join(os.getcwd(), ".delegate-session.json")
-        self._load()
+        if continue_session:
+            self._load()
 
     def _load(self):
         """Load messages from the session file if it exists."""

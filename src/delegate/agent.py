@@ -1,6 +1,8 @@
 import json
 import os
 import platform
+import threading
+import time
 from datetime import date
 from ollama import Client
 from rich.text import Text
@@ -17,6 +19,7 @@ class Agent:
         temperature: float = 0.7,
         base_url: str = "http://localhost:11434",
         api_key: str | None = None,
+        continue_session: bool = False,
     ):
         if api_key is None:
             api_key = os.environ.get("OLLAMA_API_KEY", "ollama")
@@ -25,8 +28,15 @@ class Agent:
         )
         self.model = model
         self.temperature = temperature
-        self.context = Context()
+        self.context = Context(continue_session=continue_session)
         self._system_prompt = self._load_system_prompt()
+        self._agent_thread: threading.Thread | None = None
+        self._stop_requested = False
+
+        # Set up UI with stop callback
+        from .ui import UI
+        global ui
+        ui = UI(stop_callback=self.stop)
 
     def _load_system_prompt(self) -> str:
         """Load and format the system prompt from the system.md file."""
@@ -49,7 +59,7 @@ class Agent:
         ui.console.print(Text(f.renderText("Delegate"), style="dim"))
 
         # Display quick usage guide
-        ui.print_system("Press `Tab` to toggle modes  \n`/clear` to erase session")
+        ui.print_system("Press `Tab` to toggle modes  \n`Esc` to halt the agent  \n`/clear` to erase session")
         ui.console.print()
 
         # Display restored session message
@@ -59,6 +69,12 @@ class Agent:
 
         while True:
             try:
+                # Only ask for input if the agent is not running
+                if self.is_running():
+                    # Wait a bit for the agent to finish
+                    time.sleep(0.1)
+                    continue
+
                 user_input = ui.get_user_input()
 
                 if not user_input:
@@ -81,7 +97,7 @@ class Agent:
 
     def _process_message(self, message: str):
         self.context.add({"role": "user", "content": message})
-        self._run_agent_loop()
+        self.start()
 
     def _execute_tool(self, name: str, args: dict) -> str:
         tool_func = registry.get_tool(name)
@@ -91,6 +107,9 @@ class Agent:
 
     def _run_agent_loop(self):
         while True:
+            if self._stop_requested:
+                break
+
             ui.print_assistant_thinking()
 
             try:
@@ -112,6 +131,9 @@ class Agent:
                 tool_calls_data = []
 
                 for chunk in stream:
+                    if self._stop_requested:
+                        break
+
                     message = chunk.get("message", {})
 
                     if "thinking" in message and message["thinking"]:
@@ -131,10 +153,17 @@ class Agent:
                             )
                             tool_calls_data.append(call_dict)
 
+                if self._stop_requested:
+                    ui.cancel_assistant()
+                    break
+
                 if tool_calls_data:
                     ui.cancel_assistant()
 
                     for tool_call in tool_calls_data:
+                        if self._stop_requested:
+                            break
+
                         func = tool_call.get("function", {})
                         tool_name = func.get("name")
                         if not tool_name:
@@ -181,3 +210,31 @@ class Agent:
                 ui.cancel_assistant()
                 ui.print_error(f"API error: {str(e)}")
                 break
+
+    def start(self):
+        """Start the agent loop in a separate thread."""
+        if self._agent_thread and self._agent_thread.is_alive():
+            ui.print_system("Agent is already running")
+            return
+
+        self._stop_requested = False
+        self._agent_thread = threading.Thread(target=self._run_agent_loop, daemon=True)
+        self._agent_thread.start()
+
+    def stop(self):
+        """Stop the agent loop."""
+        if not self._agent_thread or not self._agent_thread.is_alive():
+            ui.print_system("Agent is not running")
+            return
+
+        self._stop_requested = True
+        self._agent_thread.join(timeout=5.0)
+
+        if self._agent_thread.is_alive():
+            ui.print_system("Agent did not stop gracefully")
+        else:
+            ui.print_system("Agent stopped")
+
+    def is_running(self) -> bool:
+        """Check if the agent loop is currently running."""
+        return self._agent_thread is not None and self._agent_thread.is_alive()
