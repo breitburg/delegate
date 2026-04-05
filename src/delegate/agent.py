@@ -63,18 +63,32 @@ class Agent:
 
     def _compact_context(self):
         """Ask the model to summarize the current context, then replace it with the summary."""
-        ui.print_system("Compacting context...")
+        ui.print_compaction_thinking()
 
         compaction_messages = self.context.get_messages() + [
             {"role": "user", "content": self._compaction_prompt}
         ]
 
-        response = self.client.chat.completions.create(
+        stream = self.client.chat.completions.create(
             model=self.model,
             messages=compaction_messages,
             temperature=self.temperature,
+            stream=True,
         )
-        summary = response.choices[0].message.content
+
+        summary = ""
+        for chunk in stream:
+            if self._stop_requested:
+                break
+            delta = chunk.choices[0].delta
+            if delta.content:
+                summary += delta.content
+                ui.update_compaction_summary(summary)
+
+        ui.finish_compaction()
+
+        if self._stop_requested:
+            return
 
         self.context.clear()
         self.context.add(
@@ -83,8 +97,6 @@ class Agent:
                 "content": f"Summary of the conversation so far:\n\n{summary}\n\nContinue from here.",
             }
         )
-
-        ui.print_system(f"Context compacted ({len(summary)} chars)")
 
     def run(self):
         f = Figlet(font="small", width=80)

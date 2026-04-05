@@ -103,6 +103,28 @@ class UI:
     def cancel_assistant(self):
         self._stop_live()
 
+    def print_compaction_thinking(self):
+        panel = Panel(
+            Text("Compacting...", style="italic dim"),
+            title="[bold magenta]Compacting Context[/bold magenta]",
+            border_style="magenta",
+        )
+        self.live = Live(panel, console=self.console, refresh_per_second=10)
+        self.live.start()
+
+    def update_compaction_summary(self, summary: str):
+        if not self.live:
+            return
+        panel = Panel(
+            Markdown(summary, style="dim"),
+            title="[bold magenta]Compacting Context[/bold magenta]",
+            border_style="magenta",
+        )
+        self.live.update(panel)
+
+    def finish_compaction(self):
+        self._stop_live()
+
     def get_user_input(self) -> str:
         self._stop_live()
 
