@@ -103,7 +103,7 @@ class Agent:
         ui.console.print(Text(f.renderText("Delegate"), style="dim"))
 
         # Display quick usage guide
-        ui.print_system("Press `Tab` to toggle modes  \n`Esc` to halt the agent  \n`/clear` to erase session")
+        ui.print_system("Press `Tab` to toggle modes  \n`Esc` to halt the agent  \n`/clear` to erase session  \n`/compact` to summarize the session")
         ui.console.print()
 
         # Display restored session message
@@ -131,6 +131,13 @@ class Agent:
                 if user_input == "/clear":
                     self.context.clear()
                     ui.print_system("Conversation context cleared")
+                    continue
+
+                if user_input == "/compact":
+                    if not self.context.get_messages():
+                        ui.print_system("Nothing to compact")
+                        continue
+                    self._compact_context()
                     continue
 
                 self._process_message(user_input)
