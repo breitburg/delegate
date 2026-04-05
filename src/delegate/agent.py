@@ -4,7 +4,7 @@ import platform
 import threading
 import time
 from datetime import date
-from ollama import Client
+from openai import OpenAI
 from rich.text import Text
 from .context import Context
 from .tools import registry
@@ -17,15 +17,11 @@ class Agent:
         self,
         model: str = "glm-4.7:cloud",
         temperature: float = 0.7,
-        base_url: str = "http://localhost:11434",
-        api_key: str | None = None,
+        base_url: str = "http://localhost:1234/v1",
+        api_key: str = "delegate",
         continue_session: bool = False,
     ):
-        if api_key is None:
-            api_key = os.environ.get("OLLAMA_API_KEY", "ollama")
-        self.client = Client(
-            host=base_url, headers={"Authorization": f"Bearer {api_key}"}
-        )
+        self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
         self.temperature = temperature
         self.context = Context(continue_session=continue_session)
@@ -118,40 +114,51 @@ class Agent:
                     {"role": "system", "content": self._system_prompt}
                 ] + self.context.get_messages()
 
-                stream = self.client.chat(
+                stream = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
                     tools=registry.get_definitions(),
                     stream=True,
-                    options={"temperature": self.temperature},
+                    temperature=self.temperature,
                 )
 
                 content = ""
                 reasoning = ""
-                tool_calls_data = []
+                tool_calls_by_index: dict[int, dict] = {}
 
                 for chunk in stream:
                     if self._stop_requested:
                         break
 
-                    message = chunk.get("message", {})
+                    delta = chunk.choices[0].delta
 
-                    if "thinking" in message and message["thinking"]:
-                        reasoning += message["thinking"]
+                    reasoning_chunk = delta.model_extra.get("reasoning_content")
+                    if reasoning_chunk:
+                        reasoning += reasoning_chunk
                         ui.update_assistant_reasoning(reasoning)
 
-                    if "content" in message and message["content"]:
-                        content += message["content"]
+                    if delta.content:
+                        content += delta.content
                         ui.update_assistant_content(content)
 
-                    if "tool_calls" in message and message["tool_calls"]:
-                        for tool_call in message["tool_calls"]:
-                            call_dict = (
-                                tool_call.model_dump()
-                                if hasattr(tool_call, "model_dump")
-                                else tool_call
-                            )
-                            tool_calls_data.append(call_dict)
+                    if delta.tool_calls:
+                        for tool_call_delta in delta.tool_calls:
+                            index = tool_call_delta.index
+                            if index not in tool_calls_by_index:
+                                tool_calls_by_index[index] = {
+                                    "id": tool_call_delta.id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool_call_delta.function.name,
+                                        "arguments": "",
+                                    },
+                                }
+                            if tool_call_delta.function.arguments:
+                                tool_calls_by_index[index]["function"]["arguments"] += (
+                                    tool_call_delta.function.arguments
+                                )
+
+                tool_calls_data = [tool_calls_by_index[i] for i in sorted(tool_calls_by_index)]
 
                 if self._stop_requested:
                     ui.cancel_assistant()
@@ -169,9 +176,7 @@ class Agent:
                         if not tool_name:
                             continue
 
-                        tool_args = func.get("arguments", {})
-                        if isinstance(tool_args, str):
-                            tool_args = json.loads(tool_args)
+                        tool_args = json.loads(func.get("arguments", "{}"))
 
                         if ui.mode != Mode.MANUAL:
                             result = self._execute_tool(tool_name, tool_args)

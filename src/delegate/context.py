@@ -36,14 +36,14 @@ class Context:
         self._messages.append(
             {
                 "role": "assistant",
-                "content": None,
+                "content": "",
                 "tool_calls": [
                     {
                         "id": f"call_{name}",
                         "type": "function",
                         "function": {
                             "name": name,
-                            "arguments": args,
+                            "arguments": json.dumps(args),
                         },
                     }
                 ],

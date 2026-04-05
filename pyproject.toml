@@ -1,16 +1,16 @@
 [project]
 name = "delegate"
 version = "0.1.0"
-description = "Lightweight coding agent with Ollama"
+description = "Lightweight coding agent with OpenAI"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "ollama",
     "typer",
     "rich",
     "questionary",
     "prompt-toolkit",
     "pyfiglet>=1.0.4",
+    "openai>=2.30.0",
 ]
 
 [build-system]

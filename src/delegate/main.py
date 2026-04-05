@@ -1,4 +1,3 @@
-import os
 import typer
 from delegate.agent import Agent
 
@@ -8,13 +7,13 @@ app = typer.Typer(help="Lightweight coding agent with OpenAI-compatible APIs")
 @app.command()
 def main(
     model: str = typer.Option(
-        "glm-4.7:cloud",
+        "qwopus3.5-4b-v3",
         "-m",
         "--model",
-        help="Model to use (default for Ollama: glm-4.7:cloud)",
+        help="Model to use",
     ),
     temperature: float = typer.Option(
-        0.7,
+        0.3,
         "-t",
         "--temperature",
         min=0.0,
@@ -22,22 +21,22 @@ def main(
         help="Temperature for response generation",
     ),
     base_url: str = typer.Option(
-        "http://localhost:11434",
+        "http://localhost:1234/v1",
         "-u",
         "--base-url",
-        help="API base URL (default: Ollama)",
+        help="API base URL",
     ),
     api_key: str = typer.Option(
-        lambda: os.environ.get("OLLAMA_API_KEY", "ollama"),
+        "delegate",
         "-k",
         "--api-key",
-        help="API key (default: OLLAMA_API_KEY env var or 'ollama')",
+        help="API key (default: 'delegate')",
     ),
     continue_session: bool = typer.Option(
         False,
         "-c",
         "--continue",
-        help="Continue previous session from .delegate-session.json",
+        help="Continue previous session in the current directory",
     ),
 ):
     """
