@@ -19,13 +19,16 @@ class Agent:
         temperature: float = 0.7,
         base_url: str = "http://localhost:1234/v1",
         api_key: str = "delegate",
+        compact_every: int = 10,
         continue_session: bool = False,
     ):
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.model = model
         self.temperature = temperature
+        self.compact_every = compact_every
         self.context = Context(continue_session=continue_session)
         self._system_prompt = self._load_system_prompt()
+        self._compaction_prompt = self._load_compaction_prompt()
         self._agent_thread: threading.Thread | None = None
         self._stop_requested = False
 
@@ -49,6 +52,39 @@ class Agent:
             pwd=os.getcwd(),
             date=today.strftime("%A, %B %d, %Y"),
         )
+
+    def _load_compaction_prompt(self) -> str:
+        """Load the compaction instruction from the compaction.md file."""
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(package_dir, "..", "..", "prompts", "compaction.md")
+
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+    def _compact_context(self):
+        """Ask the model to summarize the current context, then replace it with the summary."""
+        ui.print_system("Compacting context...")
+
+        compaction_messages = self.context.get_messages() + [
+            {"role": "user", "content": self._compaction_prompt}
+        ]
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=compaction_messages,
+            temperature=self.temperature,
+        )
+        summary = response.choices[0].message.content
+
+        self.context.clear()
+        self.context.add(
+            {
+                "role": "user",
+                "content": f"Summary of the conversation so far:\n\n{summary}\n\nContinue from here.",
+            }
+        )
+
+        ui.print_system(f"Context compacted ({len(summary)} chars)")
 
     def run(self):
         f = Figlet(font="small", width=80)
@@ -105,6 +141,9 @@ class Agent:
         while True:
             if self._stop_requested:
                 break
+
+            if len(self.context.get_messages()) >= self.compact_every:
+                self._compact_context()
 
             ui.print_assistant_thinking()
 

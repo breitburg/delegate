@@ -32,6 +32,13 @@ def main(
         "--api-key",
         help="API key (default: 'delegate')",
     ),
+    compact_every: int = typer.Option(
+        10,
+        "-n",
+        "--compact-every",
+        min=2,
+        help="Compact the context once it reaches this many messages",
+    ),
     continue_session: bool = typer.Option(
         False,
         "-c",
@@ -47,6 +54,7 @@ def main(
         temperature=temperature,
         base_url=base_url,
         api_key=api_key,
+        compact_every=compact_every,
         continue_session=continue_session,
     )
     agent.run()
